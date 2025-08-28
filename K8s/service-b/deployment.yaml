@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-b
+  labels:
+    app: service-b
+spec:
+  selector:
+    matchLabels:
+      app: service-b
+  template:
+    metadata:
+      labels:
+        app: service-b
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "4000"
+    spec:
+      containers:
+        - name: service-b
+          image: service-b:latest
+          imagePullPolicy: Never
+          ports:
+            - name: metrics
+              containerPort: 4000
+              protocol: TCP
+          env:
+            - name: REDIS_URL
+              value: "redis://redis:6379"
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-b
+  labels:
+    app: service-b
+spec:
+  selector:
+    app: service-b
+  ports:
+    - name: metrics
+      protocol: TCP
+      port: 4000
+      targetPort: 4000
+  type: ClusterIP

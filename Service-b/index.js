@@ -4,7 +4,7 @@ import {
   generateAndSortArray,
 } from "./cpuTask.js";
 import express from "express";
-import client from "./redisClientB.js";
+import { client, connectRedis } from "./redisClientB.js";
 import promClient from "prom-client";
 
 const app = express();
@@ -36,6 +36,8 @@ async function processJobs() {
       }
 
       const parsed = JSON.parse(job);
+      await client.set(`jobStatus:${parsed.id}`, "processing");
+
       const start = Date.now();
 
       const taskType = parsed.payload.taskType;
@@ -50,7 +52,9 @@ async function processJobs() {
       }
 
       const duration = (Date.now() - start) / 1000;
+
       await client.set(`jobResult:${parsed.id}`, `done in ${duration}s`);
+      await client.set(`jobStatus:${parsed.id}`, "completed");
 
       jobsProcessed.inc();
       jobTime.observe(duration);
@@ -61,13 +65,21 @@ async function processJobs() {
   }
 }
 
-processJobs();
+async function startWorker() {
+  await connectRedis();
+  console.log("✅ Redis connected in Service B Worker");
 
-app.get("/metrics", async (req, res) => {
-  res.set("Content-Type", promClient.register.contentType);
-  res.end(await promClient.register.metrics());
-});
+  setInterval(processJobs, 6000);
 
-app.listen(PORT, () => {
-  console.log(`⚙️ Worker running on http://localhost:${PORT}`);
+  app.get("/metrics", async (req, res) => {
+    res.set("Content-Type", promClient.register.contentType);
+    res.end(await promClient.register.metrics());
+  });
+
+  app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
 });
+}
+
+startWorker();
+
