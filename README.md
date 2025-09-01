@@ -99,10 +99,11 @@ helm install grafana grafana/grafana -n monitoring
 
 ```
 # Prometheus UI
-kubectl port-forward svc/prometheus-server 9090:80 -n monitoring
+kubectl port-forward -n monitoring pod/prometheus-monitoring-kube-prometheus-prometheus-0 9090:9090
 
 # Grafana UI
-kubectl port-forward svc/grafana 3000:80 -n monitoring
+ kubectl port-forward -n monitoring pod/monitoring-grafana-8454f8bf5d-g45tn 3000:3000
+
 ```
 → Access in browser:
 
@@ -119,8 +120,19 @@ In Grafana UI:
 
 - Set URL:
 ```
-[
-](http://prometheus-server.monitoring.svc.cluster.local)
+http://monitoring-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090
+
+```
+### 🔗 Accessing Services
+Since we are using ClusterIP by default, services are not exposed outside the cluster.
+We can use port-forward to access them locally.
+```
+service A,B,C
+
+kubectl port-forward svc/service-a 3001:80
+kubectl port-forward svc/service-b 3002:4000
+kubectl port-forward svc/service-c 3003:4200
+
 ```
 ### 📊 Grafana Dashboards
 
